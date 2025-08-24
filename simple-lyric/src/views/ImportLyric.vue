@@ -1,135 +1,199 @@
 <!-- src/views/ImportLyric.vue -->
 <template>
   <div class="import-lyric">
-    <div class="header">
-      <button class="back-btn" @click="goBack">← 返回</button>
-      <h1>导入歌词</h1>
-      <div class="spacer"></div>
-    </div>
-    
-    <div class="import-container">
-      <div class="import-options">
-        <div class="option-card" @click="activeTab = 'paste'">
-          <div class="option-icon">📋</div>
-          <h3>粘贴歌词</h3>
-          <p>粘贴文本或LRC格式歌词</p>
-        </div>
-        
-        <div class="option-card" @click="activeTab = 'file'">
-          <div class="option-icon">📁</div>
-          <h3>导入文件</h3>
-          <p>上传LRC格式歌词文件</p>
+    <!-- 精简头部 -->
+    <header class="top-header">
+      <div class="container">
+        <button class="back-btn" @click="goBack">
+          <span class="back-icon">←</span>
+          返回
+        </button>
+        <div class="header-info">
+          <h1 class="page-title">导入歌词</h1>
+          <p class="page-subtitle">支持 LRC 格式文件和纯文本歌词</p>
         </div>
       </div>
-      
-      <div class="import-content">
-        <!-- 粘贴歌词 -->
-        <div v-if="activeTab === 'paste'" class="paste-content">
-          <div class="form-group">
-            <label for="rawLyrics">歌词内容</label>
-            <textarea
-              id="rawLyrics"
-              v-model="rawLyrics"
-              placeholder="在此粘贴歌词内容，支持纯文本或LRC格式&#10;示例：&#10;[00:00.00]第一行歌词&#10;[00:05.00]第二行歌词&#10;或者：&#10;第一行歌词&#10;第二行歌词"
-              rows="10"
-              @input="handleLyricsInput"
-            ></textarea>
+    </header>
+    
+    <main class="main-content">
+      <div class="container">
+        <!-- 导入方式选择 -->
+        <section class="import-methods">
+          <div class="method-tabs">
+            <button 
+              class="method-tab"
+              :class="{ active: activeTab === 'paste' }"
+              @click="activeTab = 'paste'"
+            >
+              <span class="tab-icon">📋</span>
+              粘贴歌词
+            </button>
+            
+            <button 
+              class="method-tab"
+              :class="{ active: activeTab === 'file' }"
+              @click="activeTab = 'file'"
+            >
+              <span class="tab-icon">📁</span>
+              上传文件
+            </button>
           </div>
-        </div>
+        </section>
         
-        <!-- 文件导入 -->
-        <div v-else class="file-content">
-          <div class="file-upload-area" @dragover.prevent @drop.prevent="handleFileDrop">
-            <input 
-              type="file" 
-              ref="fileInput" 
-              accept=".lrc" 
-              @change="handleFileSelect" 
-              style="display: none"
-            />
-            <div class="upload-content" @click="triggerFileSelect">
-              <div class="upload-icon">📁</div>
-              <p>点击选择LRC文件或拖拽文件到此处</p>
-              <button class="upload-btn">选择文件</button>
+        <!-- 导入内容区域 -->
+        <section class="import-content">
+          <!-- 粘贴歌词 -->
+          <div v-if="activeTab === 'paste'" class="content-panel">
+            <div class="input-group">
+              <label for="rawLyrics" class="input-label">歌词内容</label>
+              <textarea
+                id="rawLyrics"
+                v-model="rawLyrics"
+                class="lyric-textarea"
+                placeholder="在此粘贴歌词内容，支持纯文本或 LRC 格式
+
+示例：
+[00:00.00]第一行歌词
+[00:05.00]第二行歌词
+
+或者：
+第一行歌词
+第二行歌词"
+                rows="12"
+                @input="handleLyricsInput"
+              ></textarea>
             </div>
           </div>
           
-          <div v-if="fileName" class="file-info">
-            <p>已选择文件: {{ fileName }}</p>
-          </div>
-        </div>
-        
-        <!-- 歌曲信息 -->
-        <div class="song-info">
-          <div class="form-group">
-            <label for="title">歌曲标题</label>
-            <input 
-              id="title" 
-              v-model="lyricInfo.title" 
-              placeholder="请输入歌曲标题"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label for="artist">艺术家</label>
-            <input 
-              id="artist" 
-              v-model="lyricInfo.artist" 
-              placeholder="请输入艺术家"
-            />
-          </div>
-        </div>
-        
-        <!-- 歌词预览和编辑 -->
-        <div v-if="parsedLines.length > 0" class="preview-section">
-          <h2>歌词预览</h2>
-          <div class="preview-header">
-            <div class="time-header">时间</div>
-            <div class="text-header">歌词内容</div>
-          </div>
-          <div class="lyrics-editor">
-            <div 
-              class="lyric-line-editor" 
-              v-for="(line, index) in parsedLines" 
-              :key="index"
+          <!-- 文件上传 -->
+          <div v-else class="content-panel">
+            <div class="upload-area" 
+                 @dragover.prevent 
+                 @drop.prevent="handleFileDrop"
+                 :class="{ 'drag-over': isDragOver }"
+                 @dragenter="isDragOver = true"
+                 @dragleave="isDragOver = false"
             >
               <input 
-                class="time-input" 
-                :value="formatTimeToLrc(line.time)"
-                @input="updateLineTime(index, $event)"
-                type="text"
+                type="file" 
+                ref="fileInput" 
+                accept=".lrc" 
+                @change="handleFileSelect" 
+                style="display: none"
               />
+              <div class="upload-content" @click="triggerFileSelect">
+                <div class="upload-icon">📁</div>
+                <h3 class="upload-title">选择 LRC 文件</h3>
+                <p class="upload-description">点击选择文件或拖拽文件到此处</p>
+                <button class="upload-button">浏览文件</button>
+              </div>
+            </div>
+            
+            <div v-if="fileName" class="file-info">
+              <div class="file-success">
+                <span class="success-icon">✓</span>
+                <span class="file-name">{{ fileName }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <!-- 歌曲信息 -->
+        <section v-if="rawLyrics" class="song-info">
+          <h2 class="section-title">歌曲信息</h2>
+          <div class="info-form">
+            <div class="input-group">
+              <label for="title" class="input-label">歌曲标题 *</label>
               <input 
-                class="text-input" 
-                v-model="line.text" 
-                type="text"
+                id="title" 
+                v-model="lyricInfo.title" 
+                class="text-input"
+                placeholder="请输入歌曲标题"
+                required
               />
-              <button 
-                class="remove-line-btn" 
-                @click="removeLine(index)"
-                title="删除此行"
+            </div>
+            
+            <div class="input-group">
+              <label for="artist" class="input-label">艺术家</label>
+              <input 
+                id="artist" 
+                v-model="lyricInfo.artist" 
+                class="text-input"
+                placeholder="请输入艺术家名称"
+              />
+            </div>
+          </div>
+        </section>
+        
+        <!-- 歌词预览和编辑 -->
+        <section v-if="parsedLines.length > 0" class="preview-section">
+          <div class="preview-header">
+            <h2 class="section-title">歌词预览</h2>
+            <div class="preview-stats">
+              <span class="stats-item">{{ parsedLines.length }} 行</span>
+              <span class="stats-item">{{ formatDuration() }}</span>
+            </div>
+          </div>
+          
+          <div class="editor-container">
+            <div class="editor-header">
+              <div class="header-cell time-header">时间</div>
+              <div class="header-cell text-header">歌词内容</div>
+              <div class="header-cell action-header">操作</div>
+            </div>
+            
+            <div class="editor-body">
+              <div 
+                class="editor-row" 
+                v-for="(line, index) in parsedLines" 
+                :key="index"
               >
-                ×
+                <input 
+                  class="time-input" 
+                  :value="formatTimeToLrc(line.time)"
+                  @input="updateLineTime(index, $event)"
+                  type="text"
+                  placeholder="[00:00.00]"
+                />
+                <input 
+                  class="text-input" 
+                  v-model="line.text" 
+                  type="text"
+                  placeholder="输入歌词内容"
+                />
+                <button 
+                  class="remove-button" 
+                  @click="removeLine(index)"
+                  title="删除此行"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            
+            <div class="editor-actions">
+              <button class="add-line-button" @click="addNewLine">
+                <span class="add-icon">+</span>
+                添加新行
               </button>
             </div>
           </div>
-          
-          <div class="editor-actions">
-            <button class="add-line-btn" @click="addNewLine">+ 添加新行</button>
-          </div>
-        </div>
+        </section>
         
+        <!-- 导入按钮 -->
         <div class="import-actions">
           <button 
-            class="import-btn" 
+            class="import-button" 
             :disabled="!canImport"
+            :class="{ disabled: !canImport }"
             @click="importLyric"
           >
+            <span class="import-icon">✓</span>
             导入歌词
           </button>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -145,6 +209,7 @@ const activeTab = ref('paste') // 'paste' 或 'file'
 const rawLyrics = ref('')
 const fileName = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+const isDragOver = ref(false)
 
 const lyricInfo = reactive({
   title: '',
@@ -154,7 +219,7 @@ const lyricInfo = reactive({
 const parsedLines = ref<LyricLine[]>([])
 
 const canImport = computed(() => {
-  return lyricInfo.title && parsedLines.value.length > 0
+  return lyricInfo.title.trim() && parsedLines.value.length > 0
 })
 
 function goBack() {
@@ -179,13 +244,14 @@ function handleFileSelect(event: Event) {
 }
 
 function handleFileDrop(event: DragEvent) {
+  isDragOver.value = false
   if (event.dataTransfer?.files && event.dataTransfer.files[0]) {
     const file = event.dataTransfer.files[0]
     if (file.name.endsWith('.lrc')) {
       fileName.value = file.name
       readFileContent(file)
     } else {
-      alert('请上传LRC格式的歌词文件')
+      alert('请上传 LRC 格式的歌词文件')
     }
   }
 }
@@ -278,6 +344,14 @@ function parseLyrics() {
   }
 }
 
+function formatDuration(): string {
+  if (parsedLines.value.length === 0) return '0:00'
+  const lastLine = parsedLines.value[parsedLines.value.length - 1]
+  const minutes = Math.floor(lastLine.time / 60)
+  const seconds = Math.floor(lastLine.time % 60)
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
 function formatTimeToLrc(time: number): string {
   const minutes = Math.floor(time / 60)
   const seconds = Math.floor(time % 60)
@@ -313,15 +387,15 @@ function addNewLine() {
 }
 
 function importLyric() {
-  if (!lyricInfo.title || parsedLines.value.length === 0) {
+  if (!lyricInfo.title.trim() || parsedLines.value.length === 0) {
     alert('请填写歌曲标题并确保歌词内容不为空')
     return
   }
   
   const lyric = {
     id: Date.now().toString(),
-    title: lyricInfo.title,
-    artist: lyricInfo.artist || '未知艺术家',
+    title: lyricInfo.title.trim(),
+    artist: lyricInfo.artist.trim() || '未知艺术家',
     lines: parsedLines.value
   }
   
@@ -331,318 +405,510 @@ function importLyric() {
 </script>
 
 <style scoped>
+/* 全局设置 */
 .import-lyric {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.header {
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* 精简头部 */
+.top-header {
+  background: #ffffff;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 24px 0;
+}
+
+.top-header .container {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  gap: 24px;
 }
 
 .back-btn {
-  background: transparent;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  color: #0078d4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   padding: 8px 16px;
-  border-radius: 4px;
+  color: #666666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .back-btn:hover {
-  background: rgba(0, 120, 212, 0.1);
+  background: #f0f0f0;
+  border-color: #d0d0d0;
 }
 
-.header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #333;
+.back-icon {
+  font-size: 16px;
 }
 
-.spacer {
-  width: 40px; /* 与返回按钮宽度相当，保持标题居中 */
-}
-
-.import-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.import-options {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.option-card {
+.header-info {
   flex: 1;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
 }
 
-.option-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-  background: rgba(255, 255, 255, 0.9);
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 4px 0;
 }
 
-.option-icon {
-  font-size: 2rem;
-  margin-bottom: 10px;
-}
-
-.option-card h3 {
-  margin: 0 0 10px 0;
-  color: #333;
-}
-
-.option-card p {
+.page-subtitle {
+  font-size: 14px;
+  color: #666666;
   margin: 0;
-  color: #666;
-  font-size: 0.9rem;
 }
 
-.form-group {
-  margin-bottom: 20px;
+/* 主内容区域 */
+.main-content {
+  padding: 32px 0;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-  color: #555;
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 16px 0;
 }
 
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.8);
+/* 导入方式选择 */
+.import-methods {
+  margin-bottom: 32px;
 }
 
-.form-group textarea {
-  resize: vertical;
-  min-height: 150px;
-}
-
-.file-upload-area {
-  border: 2px dashed #ccc;
+.method-tabs {
+  display: flex;
+  gap: 8px;
+  background: #f9f9f9;
   border-radius: 8px;
-  padding: 40px 20px;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: border-color 0.3s;
+  padding: 4px;
 }
 
-.file-upload-area:hover {
-  border-color: #0078d4;
+.method-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 16px;
+  color: #666666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.method-tab:hover {
+  background: #f0f0f0;
+}
+
+.method-tab.active {
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tab-icon {
+  font-size: 16px;
+}
+
+/* 导入内容面板 */
+.import-content {
+  margin-bottom: 32px;
+}
+
+.content-panel {
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.input-group {
+  margin-bottom: 16px;
+}
+
+.input-group:last-child {
+  margin-bottom: 0;
+}
+
+.input-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 8px;
+}
+
+.text-input {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+.lyric-textarea {
+  width: 100%;
+  min-height: 300px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 14px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  line-height: 1.6;
+  resize: vertical;
+  transition: all 0.2s ease;
+}
+
+.lyric-textarea:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+/* 文件上传区域 */
+.upload-area {
+  border: 2px dashed #e0e0e0;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-area:hover,
+.upload-area.drag-over {
+  border-color: #1a1a1a;
+  background: #f5f5f5;
 }
 
 .upload-content {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 16px;
 }
 
 .upload-icon {
-  font-size: 3rem;
-  margin-bottom: 15px;
+  font-size: 48px;
+  color: #999999;
 }
 
-.upload-btn {
-  background: #0078d4;
-  color: white;
+.upload-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.upload-description {
+  font-size: 14px;
+  color: #666666;
+  margin: 0;
+}
+
+.upload-button {
+  background: #1a1a1a;
+  color: #ffffff;
   border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
   cursor: pointer;
-  font-size: 1rem;
-  margin-top: 15px;
+  transition: all 0.2s ease;
 }
 
-.upload-btn:hover {
-  background: #106ebe;
+.upload-button:hover {
+  background: #333333;
 }
 
 .file-info {
-  margin-top: 15px;
-  padding: 10px;
-  background: rgba(0, 120, 212, 0.1);
-  border-radius: 4px;
-}
-
-.file-info p {
-  margin: 0;
-  color: #0078d4;
-}
-
-.preview-section {
-  margin-top: 30px;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #f0f8ff;
+  border: 1px solid #e0f0ff;
   border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.preview-section h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  color: #333;
+.file-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1a73e8;
+  font-weight: 500;
+}
+
+.success-icon {
+  font-size: 16px;
+}
+
+/* 歌曲信息 */
+.song-info {
+  margin-bottom: 32px;
+}
+
+.info-form {
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+/* 预览区域 */
+.preview-section {
+  margin-bottom: 32px;
 }
 
 .preview-header {
   display: flex;
-  background: rgba(0, 0, 0, 0.05);
-  padding: 10px;
-  border-radius: 4px;
-  font-weight: bold;
-  margin-bottom: 10px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
-.time-header,
-.time-input {
-  width: 100px;
-  margin-right: 10px;
+.preview-stats {
+  display: flex;
+  gap: 12px;
 }
 
-.text-header,
-.text-input {
-  flex: 1;
+.stats-item {
+  background: #f5f5f5;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #666666;
 }
 
-.lyrics-editor {
+.editor-container {
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.editor-header {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  gap: 16px;
+  background: #f9f9f9;
+  padding: 12px 16px;
+  font-weight: 500;
+  color: #666666;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.header-cell {
+  display: flex;
+  align-items: center;
+}
+
+.editor-body {
   max-height: 400px;
   overflow-y: auto;
 }
 
-.lyric-line-editor {
-  display: flex;
+.editor-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
   align-items: center;
-  margin-bottom: 10px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 4px;
+}
+
+.editor-row:last-child {
+  border-bottom: none;
 }
 
 .time-input {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-family: monospace; /* 使用等宽字体显示时间 */
-  font-size: 1rem;
-  width: 100px;
-  margin-right: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
 }
 
-.text-input {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 1rem;
-}
-
-.remove-line-btn {
-  background: #ffebee;
-  color: #c62828;
+.remove-button {
+  background: #ffe6e6;
+  color: #d32f2f;
   border: none;
-  width: 30px;
-  height: 30px;
   border-radius: 50%;
-  margin-left: 10px;
+  width: 32px;
+  height: 32px;
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 16px;
+  font-weight: bold;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.remove-line-btn:hover {
-  background: #ffcdd2;
+.remove-button:hover {
+  background: #ffcccc;
 }
 
 .editor-actions {
-  margin-top: 15px;
+  padding: 16px;
   text-align: center;
+  border-top: 1px solid #f0f0f0;
 }
 
-.add-line-btn {
-  background: #e3f2fd;
-  color: #1976d2;
-  border: none;
+.add-line-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0f8ff;
+  color: #1a73e8;
+  border: 1px solid #e0f0ff;
+  border-radius: 8px;
   padding: 8px 16px;
-  border-radius: 4px;
+  font-size: 14px;
   cursor: pointer;
-  font-size: 1rem;
+  transition: all 0.2s ease;
 }
 
-.add-line-btn:hover {
-  background: #bbdefb;
+.add-line-button:hover {
+  background: #e6f4ff;
 }
 
+.add-icon {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* 导入按钮 */
 .import-actions {
-  margin-top: 30px;
   text-align: center;
 }
 
-.import-btn {
-  background: #0078d4;
-  color: white;
+.import-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #1a1a1a;
+  color: #ffffff;
   border: none;
-  padding: 12px 30px;
-  border-radius: 4px;
+  border-radius: 8px;
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: 500;
   cursor: pointer;
-  font-size: 1.1rem;
+  transition: all 0.2s ease;
 }
 
-.import-btn:hover:not(:disabled) {
-  background: #106ebe;
+.import-button:hover:not(.disabled) {
+  background: #333333;
 }
 
-.import-btn:disabled {
-  background: #ccc;
+.import-button.disabled {
+  background: #f0f0f0;
+  color: #999999;
   cursor: not-allowed;
 }
 
+.import-icon {
+  font-size: 16px;
+}
+
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .import-options {
+  .container {
+    padding: 0 16px;
+  }
+  
+  .top-header .container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .page-title {
+    font-size: 20px;
+  }
+  
+  .method-tabs {
     flex-direction: column;
   }
   
-  .lyric-line-editor {
-    flex-direction: column;
-    align-items: stretch;
+  .info-form {
+    grid-template-columns: 1fr;
+  }
+  
+  .editor-header,
+  .editor-row {
+    grid-template-columns: 100px 1fr 50px;
+    gap: 12px;
+  }
+  
+  .content-panel,
+  .info-form,
+  .editor-container {
+    padding: 16px;
+  }
+  
+  .upload-area {
+    padding: 32px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 24px 0;
+  }
+  
+  .back-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  
+  .page-title {
+    font-size: 18px;
+  }
+  
+  .upload-area {
+    padding: 24px 12px;
+  }
+  
+  .import-button {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+  
+  .editor-header,
+  .editor-row {
+    grid-template-columns: 80px 1fr 40px;
+    gap: 8px;
   }
   
   .time-input {
-    margin-right: 0;
-    margin-bottom: 10px;
-  }
-  
-  .remove-line-btn {
-    align-self: flex-end;
-    margin-left: 0;
-    margin-top: 10px;
+    font-size: 10px;
+    padding: 4px 6px;
   }
 }
 </style>
